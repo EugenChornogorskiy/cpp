@@ -1,10 +1,11 @@
 #pragma once
-#include "Organism.h"
+#include "Plant.h"
 #include "World.h"
 
-class Grass : public Organism
+class Grass : public Plant
 {
 public:
+    Grass(Position position, int turn);
     Grass(Position position);
     Grass();
 

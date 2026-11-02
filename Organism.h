@@ -14,11 +14,12 @@ private:
 	string species;
     int initiative;
     int liveLength;
-    int powerToReproduce;
-    int age = 0;
+    int powerToReproduce; 
+    int age = 0; 
+    vector<Organism*> children;
 	vector<pair<int, int>> ancestorsHistory;
 public:
-	Organism(int power, int initiative, int liveLength, int powerToReproduce, Position position);
+	Organism(int power, int initiative, int liveLength, int powerToReproduce, Position position, int turn);
 	Organism();
 
 	Organism(const Organism& other);  
@@ -33,7 +34,7 @@ public:
     int getLiveLength() const;
 	void setLiveLength(int liveLength);
     int getPowerToReproduce() const;
-	void setPowerToReproduce(int powerToReproduce);
+	void setPowerToReproduce(int powerToReproduce); 
     int getAge() const;
 	void setAge(int age);
     void incrementAge();
@@ -41,22 +42,23 @@ public:
     void setPosition(Position position);
     string getSpecies() const;
     void setSpecies(string spec);
+ 
+    void addChild(Organism* org);
 
     void addAncestor(int birthTurn, int deathTurn);
     vector<pair<int, int>> getAncestorsHistory() const;
-    void updateAncestorDeath(int turn);
+    void updateAncestorDeath(int turn,int parentBirth);
+    void copyAncestorsFrom(const Organism& parent, int birthTurn);
 
 	string toString();
 
 	virtual void move(int dx, int dy);
-    virtual void action(World& world);
+    virtual void action(World& world) = 0;
     virtual bool isDead() const;
     virtual bool canReproduce() const;
-    virtual void reproduce(World& world);
-    virtual void onCollision(Organism& other, World& world);
+    virtual void reproduce(World& world) = 0; 
 
 	virtual void serialize(ofstream& file) const;
-    virtual void deserialize(ifstream& file);
-    static unique_ptr<Organism> createFromSpecies(const std::string& species);
+    virtual void deserialize(ifstream& file); 
 	virtual ~Organism() = 0;
 };

@@ -1,7 +1,7 @@
 #include "Plant.h"
 #include "World.h"
 
-Plant::Plant(int power, int initiative, int liveLength, int powerToReproduce, Position position) : Organism(power, initiative, liveLength, powerToReproduce, position)
+Plant::Plant(int power, int initiative, int liveLength, int powerToReproduce, Position position,int turn) : Organism(power, initiative, liveLength, powerToReproduce, position,turn)
 {
 	setSpecies("P");
 }

@@ -1,8 +1,7 @@
 #include "World.h"
 #include <fstream>
-#include "Sheep.h"
-#include "Grass.h"
-#include "Organism.h"
+#include "OrganismFactory.h" 
+#include "Organism.h" 
 #include <algorithm>
 #include <iostream>
 
@@ -36,6 +35,20 @@ vector<Position> World::getVectorOfFreePositionsAround(Position position)
 	auto iter = remove_if(result.begin(), result.end(),
 		[this](Position pos) {return !isPositionFree(pos); });
 	result.erase(iter, result.end());
+
+	return result;
+}
+
+vector<Position> World::getVectorOfPositionsAround(Position position)
+{	
+	int pos_x = position.getX(), pos_y = position.getY();
+	vector<Position> result;
+	for(int x = -1; x < 2; ++x)
+		for (int y = -1; y < 2; ++y)
+			if ((x != 0 || y != 0) && 
+				isPositionOnWorld(pos_x + x, pos_y + y)) {
+				result.push_back(Position(pos_x + x, pos_y + y));
+			} 
 
 	return result;
 }
@@ -109,7 +122,14 @@ void World::makeTurn()
     for (auto& org : organisms) {
         copy.push_back(org.get());
     }
-     
+
+    for (auto* org : copy) {
+        if (org && org->isDead()) {
+            org->updateAncestorDeath(turn,turn-org->getAge()); 
+            org->toString();
+        }
+    }
+
     for (auto* org : copy) {
         if (org && !org->isDead()) {
             org->action(*this);
@@ -124,6 +144,8 @@ void World::makeTurn()
     
     turn++;
 }
+
+
 void World::writeWorld(string fileName)
 {
     ofstream file(fileName, ios::binary);
@@ -171,11 +193,8 @@ void World::readWorld(string fileName)
         string species;
         species.resize(len);
         file.read(&species[0], len);
-         
-        unique_ptr<Organism> org;
-        if (species == "S") org = make_unique<Sheep>(Position(0,0));
-        else if (species == "G") org = make_unique<Grass>(Position(0,0));
-        else continue;
+          
+        auto org = OrganismFactory::create(species);
         
         if (org) { 
             org->deserialize(file);
@@ -185,9 +204,11 @@ void World::readWorld(string fileName)
     
     file.close();
 }
+
+
 string World::toString()
 {
-	string result = "\nturn: " + to_string(getTurn()) + "\n";
+	string result = "";
 	string spec;
 
 	for (int wY = 0; wY < getWorldY(); ++wY) {

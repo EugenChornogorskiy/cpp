@@ -5,6 +5,7 @@
 class Sheep : public Animal
 {
 public:
+    Sheep(Position position,int turn);
     Sheep(Position position);
     Sheep();
     

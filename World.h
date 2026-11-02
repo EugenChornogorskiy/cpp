@@ -40,6 +40,7 @@ public:
     void removeOrganism(Organism* organism);
     Organism* getOrganismAt(Position position);
     vector<Position> getVectorOfFreePositionsAround(Position position);
+	vector<Position> getVectorOfPositionsAround(Position position);
 	void makeTurn();
 
 	void writeWorld(string fileName);

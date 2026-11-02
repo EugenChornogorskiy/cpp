@@ -3,21 +3,24 @@
 #include "World.h"
 #include "Sheep.h"
 #include "Grass.h"
+#include "Wilk.h"
+#include "Muchomor.h"
+#include "Mlecz.h"
 using namespace std;
 
-Organism::Organism(int power, int initiative, int liveLength, int powerToReproduce, Position position) : power(power), initiative(initiative), liveLength(liveLength),
+Organism::Organism(int power, int initiative, int liveLength, int powerToReproduce, Position position, int turn) : power(power), initiative(initiative), liveLength(liveLength),
 	powerToReproduce(powerToReproduce), position(position), species("O"), age(0)
 { 
-    ancestorsHistory.push_back({0, -1}); 
+    ancestorsHistory.push_back({turn, -1}); 
 }
 
-Organism::Organism() : Organism(0, 0, 10, 5, Position(0, 0)) {}
+Organism::Organism() : Organism(0, 0, 10, 5, Position(0, 0),0) {}
 
 Organism::Organism(const Organism& other) : power(other.power), initiative(other.initiative), liveLength(other.liveLength), powerToReproduce(other.powerToReproduce), 
 	age(other.age), position(other.position), species(other.species), ancestorsHistory(other.ancestorsHistory){}
 
 Organism::Organism(Organism&& other) noexcept 
-    : power(other.power), initiative(other.initiative), liveLength(other.liveLength), powerToReproduce(other.powerToReproduce), age(other.age), position(std::move(other.position)),
+    : power(other.power), initiative(other.initiative), liveLength(other.liveLength), powerToReproduce(other.powerToReproduce),age(other.age), position(std::move(other.position)),
   	species(std::move(other.species)), ancestorsHistory(std::move(other.ancestorsHistory))
 {  
     other.power = 0;
@@ -70,38 +73,56 @@ Organism& Organism::operator=(Organism&& other) noexcept
 
 Organism::~Organism() {}
 
-int Organism::getPower() const { return power; }
-void Organism::setPower(int power) { this->power = max(0, power); }
+int Organism::getPower() const { return power; } 
 int Organism::getInitiative() const { return initiative; }
 int Organism::getLiveLength() const { return liveLength; }
-int Organism::getPowerToReproduce() const { return powerToReproduce; }
+int Organism::getPowerToReproduce() const { return powerToReproduce; } 
 int Organism::getAge() const { return age; }
+Position Organism::getPosition() const { return position; }
+string Organism::getSpecies() const { return species; }
+vector<pair<int, int>> Organism::getAncestorsHistory() const { return ancestorsHistory; }
+
 void Organism::setInitiative(int initiative) { this->initiative = initiative; }
 void Organism::setLiveLength(int liveLength) { this->liveLength = liveLength; }
 void Organism::setPowerToReproduce(int powerToReproduce) { this->powerToReproduce = powerToReproduce; }
-void Organism::setAge(int age) { this->age = age; }
-void Organism::incrementAge() { age++; }
-Position Organism::getPosition() const { return position; }
-void Organism::setPosition(Position position) { this->position = position; }
-string Organism::getSpecies() const { return species; }
-void Organism::setSpecies(string spec) { species = spec; }
+void Organism::setAge(int age) { this->age = age; } 
+void Organism::incrementAge() { age++; } 
+void Organism::setPosition(Position position) { this->position = position; } 
+void Organism::setSpecies(string spec) { species = spec; } 
+void Organism::setPower(int power) { this->power = max(0, power); }
 
 void Organism::addAncestor(int birthTurn, int deathTurn)
 {
     ancestorsHistory.push_back({birthTurn, deathTurn});
 }
 
-vector<pair<int, int>> Organism::getAncestorsHistory() const
+void Organism::addChild(Organism* org)
 {
-    return ancestorsHistory;
+    children.push_back(org);
+} 
+
+void Organism::copyAncestorsFrom(const Organism& parent, int birthTurn)
+{ 
+    this->ancestorsHistory = parent.ancestorsHistory; 
+    this->ancestorsHistory.push_back({birthTurn, -1}); 
+}
+ 
+void Organism::updateAncestorDeath(int turn, int parentBirth)
+{
+    for (auto& ancestor : ancestorsHistory) {
+        if (ancestor.first == parentBirth && ancestor.second == -1) {
+            ancestor.second = turn;
+            break;
+        }
+    }
+    for (auto& child : children){
+        if (!child->isDead())
+        {
+            child->updateAncestorDeath(turn,parentBirth);
+        }  
+    } 
 }
 
-void Organism::updateAncestorDeath(int turn)
-{
-    if (!ancestorsHistory.empty() && ancestorsHistory.back().second == -1) {
-        ancestorsHistory.back().second = turn;
-    }
-}
 bool Organism::isDead() const
 {
     return age >= liveLength;
@@ -115,34 +136,16 @@ bool Organism::canReproduce() const
 void Organism::move(int dx, int dy)
 {
     position.move(dx, dy);
-}
-
-void Organism::action(World& world)
-{ 
-    power++;
-    age++;
-}
+} 
 
 void Organism::reproduce(World& world)
 { 
     if (canReproduce()) {
         power /= 2;
     }
-}
+} 
 
-void Organism::onCollision(Organism& other, World& world) {}
-
-string Organism::toString()
-{
-	return "{ species: " + this->getSpecies() + 
-		", power: " + to_string(getPower()) + 
-		", position: " + getPosition().toString() + "}";
-}
-unique_ptr<Organism> Organism::createFromSpecies(const std::string& species) {
-    if (species == "S") return std::make_unique<Sheep>(Position(0,0));
-    if (species == "G") return std::make_unique<Grass>(Position(0,0)); 
-    return nullptr;
-}
+ 
 void Organism::serialize(ofstream& file) const
 { 
     file.write((char*)&power, sizeof(int));
@@ -186,3 +189,20 @@ void Organism::deserialize(ifstream& file)
         ancestorsHistory.push_back({birth, death});
     }
 }
+
+
+string Organism::toString()
+{
+    std::string s;
+
+    for (const auto& p : getAncestorsHistory())
+    {
+        s += "(" + std::to_string(p.first) +
+            ", " + std::to_string(p.second) + ") ";
+    }
+    
+	return "{ species: " + this->getSpecies() + 
+		", power: " + to_string(getPower()) + 
+		", position: " + getPosition().toString() + "}"
+        ", ancestors: " + s +  "}";
+} 
